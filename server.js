@@ -5,6 +5,11 @@ const PORT = process.env.PORT || 7000;
 
 app.use(express.static(__dirname));
 
+// Fängt den Root-Aufruf ab und leitet informativ weiter
+app.get("/", (req, res) => {
+    res.send('MediathekView DE Stremio Add-on läuft! Füge <a href="/manifest.json">/manifest.json</a> in Stremio ein.');
+});
+
 const CATEGORY_MAP = {
     "Filme": "Film",
     "Serien": "Serie",
@@ -128,14 +133,13 @@ async function fetchItems(genre, channel, searchQuery) {
 }
 
 app.get("/manifest.json", (req, res) => {
-    // Erkennt automatisch, ob lokal oder auf Render (nutzt die echte Domain)
     const host = req.get("host");
     const protocol = req.protocol;
     const iconUrl = `${protocol}://${host}/icon.svg`;
 
     res.json({
         id: "org.mediathek.deutschland",
-        version: "1.2.1",
+        version: "1.2.2",
         name: "MediathekView DE (Erweitert)",
         description: "Alle deutschen ÖR-Sender mit erhöhter Anzahl an Inhalten",
         icon: iconUrl,
