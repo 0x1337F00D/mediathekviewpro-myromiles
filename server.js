@@ -3,25 +3,25 @@ const axios = require("axios");
 const app = express();
 const PORT = process.env.PORT || 7000;
 
-// Statische Dateien (wie icon.svg) aus dem aktuellen Verzeichnis ausliefern
 app.use(express.static(__dirname));
 
-// Erweiterte Kategorie-Mappings
 const CATEGORY_MAP = {
+    "Filme": "Film",
+    "Serien": "Serie",
     "Krimi & Tatort": "Tatort",
     "Dokumentation": "Doku",
     "Natur & Wissen": "Natur",
     "Geschichte": "Geschichte",
     "Wissenschaft": "Wissenschaft",
     "Kultur & Kunst": "Kultur",
-    "Filme & Serien": "Film",
     "Sport": "Sport",
-    "Talk & Show": "Lanz",
-    "Comedy & Satire": "heute-show"
+    "Talk & Show": "Talk",
+    "Comedy & Satire": "Satire",
+    "Nachrichten": "Nachrichten",
+    "Tagesschau": "Tagesschau"
 };
 
-// Fallback Poster, falls ein Beitrag kein Bild liefert
-const FALLBACK_POSTER = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+PHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSIxMjAiIGZpbGw9IiMwZjE3MmEiLz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwLCAxMCkgZmlsbD0iIzIyYzU1ZSI+PHBhdGggZD0iTTI1Niw2MCBDMjcwLDE0MCAzMTAsMjEwIDM4MCwyNDAgQzMxMCwyNTAgMjg1LDI5MCAyNzUsMzYwIEMyNjUsMzEwIDI2MCwyOTAgMjM3LDM2MCBDMjI3LDI5MCAyMDIsMjUwIDEzMjLDI0MCBDMjAyLDIxMCAyNDIsMTQwIDI1Niw2MCBaIj48L2c+PC9zdmc=";
+const FALLBACK_POSTER = "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?w=500&auto=format&fit=crop&q=60";
 
 app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -31,14 +31,11 @@ app.use((req, res, next) => {
     next();
 });
 
-// Hilfsfunktion: Erkennt Selektoren wie !sender, #thema, >dauer im Suchtext
 function parseAdvancedQuery(searchQuery, defaultGenre, defaultChannel) {
     let queries = [];
-    let cleanTerms = [];
 
     if (searchQuery && searchQuery.trim() !== "") {
         const parts = searchQuery.trim().split(/\s+/);
-        
         let currentField = ["title", "description", "topic"];
         let currentText = [];
 
@@ -75,15 +72,17 @@ function parseAdvancedQuery(searchQuery, defaultGenre, defaultChannel) {
             queries.push({ fields: ["title", "description", "topic"], query: currentText.join(" ") });
         }
     } else {
-        // Fallback über Genre-Mapping oder Standard
         const searchTerm = (defaultGenre && CATEGORY_MAP[defaultGenre]) ? CATEGORY_MAP[defaultGenre] : "";
         if (searchTerm) {
-            queries.push({ fields: ["title", "topic"], query: searchTerm });
+            if (defaultGenre === "Krimi & Tatort") {
+                queries.push({ fields: ["title", "topic"], query: "Tatort" });
+            } else {
+                queries.push({ fields: ["title", "topic"], query: searchTerm });
+            }
         }
     }
 
-    // Sender aus dem Katalog-Kontext hinzufügen, falls nicht per ! überschrieben
-    if (defaultChannel && defaultChannel !== "all" && defaultChannel !== "neueste") {
+    if (defaultChannel && defaultChannel !== "all") {
         const hasChannelQuery = queries.some(q => q.fields.includes("channel"));
         if (!hasChannelQuery) {
             queries.push({ fields: ["channel"], query: defaultChannel.toLowerCase() });
@@ -105,13 +104,23 @@ async function fetchItems(genre, channel, searchQuery) {
             queries: queries,
             sortBy: "timestamp",
             sortOrder: "desc",
-            size: 60
+            size: 100
         }, {
             headers: { "Content-Type": "application/json" },
-            timeout: 8000
+            timeout: 10000
         });
         
-        return res.data?.result?.results || [];
+        let results = res.data?.result?.results || [];
+
+        results = results.filter(i => {
+            const url = (i.url_video_hd || i.url_video || "").toLowerCase();
+            if (i.channel && i.channel.toLowerCase() === "arte" && (url.includes("arte.fr") || url.includes("/fr/"))) {
+                return false;
+            }
+            return true;
+        });
+
+        return results;
     } catch (e) {
         console.error("Mediathek API Fehler:", e.message);
         return [];
@@ -119,55 +128,54 @@ async function fetchItems(genre, channel, searchQuery) {
 }
 
 app.get("/manifest.json", (req, res) => {
+    // Erkennt automatisch, ob lokal oder auf Render (nutzt die echte Domain)
+    const host = req.get("host");
+    const protocol = req.protocol;
+    const iconUrl = `${protocol}://${host}/icon.svg`;
+
     res.json({
-        id: "org.mediathek.myrobotdev",
-        version: "2.2.0",
-        name: "MediathekView Pro (my-robot Dev)",
-        description: "Öffentlich-rechtliche Mediatheken mit erweiterten Selektoren (!Sender, #Thema)",
-        icon: "http://localhost:7000/icon.svg",
+        id: "org.mediathek.deutschland",
+        version: "1.2.1",
+        name: "MediathekView DE (Erweitert)",
+        description: "Alle deutschen ÖR-Sender mit erhöhter Anzahl an Inhalten",
+        icon: iconUrl,
         resources: ["catalog", "meta", "stream"],
         types: ["movie"],
         catalogs: [
             { 
                 type: "movie", 
-                id: "mediathek_search", 
+                id: "de_search", 
                 name: "🔍 Mediathek: Erweiterte Suche", 
-                extra: [
-                    { name: "search", isRequired: true }
-                ] 
+                extra: [{ name: "search", isRequired: true }] 
             },
-            { 
-                type: "movie", 
-                id: "mediathek_neueste", 
-                name: "Mediathek: Neueste Inhalte", 
-                extra: [
-                    { name: "genre", isRequired: false, options: Object.keys(CATEGORY_MAP) }
-                ] 
-            },
-            { 
-                type: "movie", 
-                id: "mediathek_ard", 
-                name: "ARD: Neueste Beiträge", 
-                extra: [
-                    { name: "genre", isRequired: false, options: Object.keys(CATEGORY_MAP) }
-                ] 
-            },
-            { 
-                type: "movie", 
-                id: "mediathek_zdf", 
-                name: "ZDF: Neueste Beiträge", 
-                extra: [
-                    { name: "genre", isRequired: false, options: Object.keys(CATEGORY_MAP) }
-                ] 
-            },
-            { 
-                type: "movie", 
-                id: "mediathek_arte", 
-                name: "ARTE: Neueste Beiträge", 
-                extra: [
-                    { name: "genre", isRequired: false, options: Object.keys(CATEGORY_MAP) }
-                ] 
-            }
+            { type: "movie", id: "de_ard", name: "ARD: Neueste Beiträge" },
+            { type: "movie", id: "de_zdf", name: "ZDF: Neueste Beiträge" },
+            { type: "movie", id: "de_arte", name: "ARTE (DE): Neueste Beiträge" },
+            { type: "movie", id: "de_3sat", name: "3sat" },
+            { type: "movie", id: "de_phoenix", name: "Phoenix" },
+            { type: "movie", id: "de_wdr", name: "WDR" },
+            { type: "movie", id: "de_ndr", name: "NDR" },
+            { type: "movie", id: "de_swr", name: "SWR" },
+            { type: "movie", id: "de_mdr", name: "MDR" },
+            { type: "movie", id: "de_br", name: "BR" },
+            { type: "movie", id: "de_hr", name: "HR" },
+            { type: "movie", id: "de_rbb", name: "RBB" },
+            { type: "movie", id: "de_radiobremen", name: "Radio Bremen" },
+            { type: "movie", id: "de_zdfinfo", name: "ZDFinfo" },
+            { type: "movie", id: "de_zdfneo", name: "ZDFneo" },
+            { type: "movie", id: "de_kika", name: "KiKA" },
+            { type: "movie", id: "cat_filme", name: "🎬 Filme" },
+            { type: "movie", id: "cat_serien", name: "📺 Serien" },
+            { type: "movie", id: "cat_krimi", name: "🔫 Krimi & Tatort" },
+            { type: "movie", id: "cat_doku", name: "🌍 Dokumentation" },
+            { type: "movie", id: "cat_natur", name: "🌿 Natur & Wissen" },
+            { type: "movie", id: "cat_geschichte", name: "📜 Geschichte" },
+            { type: "movie", id: "cat_wissenschaft", name: "🔬 Wissenschaft" },
+            { type: "movie", id: "cat_kultur", name: "🎨 Kultur & Kunst" },
+            { type: "movie", id: "cat_sport", name: "⚽ Sport" },
+            { type: "movie", id: "cat_talk", name: "💬 Talk & Show" },
+            { type: "movie", id: "cat_comedy", name: "🎤 Comedy & Satire" },
+            { type: "movie", id: "cat_nachrichten", name: "📰 Nachrichten & Tagesschau" }
         ]
     });
 });
@@ -175,9 +183,37 @@ app.get("/manifest.json", (req, res) => {
 app.get("/catalog/:type/:id/:extra?.json", async (req, res) => {
     const catalogId = req.params.id;
     let channel = "all";
-    if (catalogId.includes("ard")) channel = "ard";
-    else if (catalogId.includes("zdf")) channel = "zdf";
-    else if (catalogId.includes("arte")) channel = "arte";
+    let genre = "";
+
+    if (catalogId === "de_ard") channel = "ard";
+    else if (catalogId === "de_zdf") channel = "zdf";
+    else if (catalogId === "de_arte") channel = "arte";
+    else if (catalogId === "de_3sat") channel = "3sat";
+    else if (catalogId === "de_phoenix") channel = "phoenix";
+    else if (catalogId === "de_wdr") channel = "wdr";
+    else if (catalogId === "de_ndr") channel = "ndr";
+    else if (catalogId === "de_swr") channel = "swr";
+    else if (catalogId === "de_mdr") channel = "mdr";
+    else if (catalogId === "de_br") channel = "br";
+    else if (catalogId === "de_hr") channel = "hr";
+    else if (catalogId === "de_rbb") channel = "rbb";
+    else if (catalogId === "de_radiobremen") channel = "radio bremen";
+    else if (catalogId === "de_zdfinfo") channel = "zdfinfo";
+    else if (catalogId === "de_zdfneo") channel = "zdfneo";
+    else if (catalogId === "de_kika") channel = "kika";
+
+    if (catalogId.includes("filme")) genre = "Filme";
+    else if (catalogId.includes("serien")) genre = "Serien";
+    else if (catalogId.includes("krimi")) genre = "Krimi & Tatort";
+    else if (catalogId.includes("doku")) genre = "Dokumentation";
+    else if (catalogId.includes("natur")) genre = "Natur & Wissen";
+    else if (catalogId.includes("geschichte")) genre = "Geschichte";
+    else if (catalogId.includes("wissenschaft")) genre = "Wissenschaft";
+    else if (catalogId.includes("kultur")) genre = "Kultur & Kunst";
+    else if (catalogId.includes("sport")) genre = "Sport";
+    else if (catalogId.includes("talk")) genre = "Talk & Show";
+    else if (catalogId.includes("comedy")) genre = "Comedy & Satire";
+    else if (catalogId.includes("nachrichten")) genre = "Nachrichten";
 
     let searchQuery = "";
     const extraPath = req.params.extra || "";
@@ -195,47 +231,46 @@ app.get("/catalog/:type/:id/:extra?.json", async (req, res) => {
         searchQuery = decodeURIComponent(req.query.search);
     }
 
-    if (!searchQuery && req.url.includes("search=")) {
-        const match = req.url.match(/search=([^&]+)/);
-        if (match) {
-            searchQuery = decodeURIComponent(match[1].replace(".json", ""));
-        }
+    if (!genre && req.query.genre) {
+        genre = decodeURIComponent(req.query.genre);
     }
 
-    const genre = req.query.genre ? decodeURIComponent(req.query.genre) : "";
     const items = await fetchItems(genre, channel, searchQuery);
 
-    res.json({
-        metas: items.map(i => {
-            const videoUrl = i.url_video_hd || i.url_video || "";
-            let imgUrl = i.preview_image_url || i.thumbnailUrl || i.small_thumbnail_url || "";
-            if (imgUrl.startsWith("//")) imgUrl = "https:" + imgUrl;
-            const poster = imgUrl || FALLBACK_POSTER;
+    const metas = items.map(i => {
+        const videoUrl = i.url_video_hd || i.url_video || "";
+        
+        let poster = i.preview_image_url || "";
+        if (poster.startsWith("//")) poster = "https:" + poster;
 
-            const encodedId = Buffer.from(JSON.stringify({
-                url: videoUrl,
-                title: i.title || "Unbekannter Titel",
-                description: `[${i.channel}] ${i.topic}\n\n${i.description || "Keine Beschreibung verfügbar."}`,
-                poster: poster
-            })).toString("base64url");
+        if (!poster) {
+            poster = FALLBACK_POSTER;
+        }
 
-            return {
-                id: "mvw:" + encodedId,
-                type: "movie",
-                name: i.title || "Unbekannter Titel",
-                poster: poster,
-                background: poster,
-                description: `[${i.channel}] ${i.topic}\n\n${i.description || "Keine Beschreibung verfügbar."}`
-            };
-        })
+        const encodedId = Buffer.from(JSON.stringify({
+            url: videoUrl,
+            title: i.title || "Unbekannter Titel",
+            description: `[${i.channel}] ${i.topic}\n\n${i.description || "Keine Beschreibung verfügbar."}`,
+            poster: poster
+        })).toString("base64url");
+
+        return {
+            id: "mvw:" + encodedId,
+            type: "movie",
+            name: i.title || "Unbekannter Titel",
+            poster: poster,
+            background: poster,
+            description: `[${i.channel}] ${i.topic}\n\n${i.description || "Keine Beschreibung verfügbar."}`
+        };
     });
+
+    res.json({ metas });
 });
 
 app.get("/meta/:type/:id.json", (req, res) => {
     try {
-        const cleanId = req.params.id.name ? req.params.id : req.params.id.replace("mvw:", "").replace(".json", "");
-        // Fallback robust decoding
-        const decoded = JSON.parse(Buffer.from(req.params.id.replace("mvw:", "").replace(".json", ""), "base64url").toString("utf-8"));
+        const cleanId = req.params.id.replace("mvw:", "").replace(".json", "");
+        const decoded = JSON.parse(Buffer.from(cleanId, "base64url").toString("utf-8"));
         res.json({
             meta: {
                 id: req.params.id,
@@ -261,4 +296,4 @@ app.get("/stream/:type/:id.json", (req, res) => {
     }
 });
 
-app.listen(PORT, () => console.log(`Server "my-robot Dev" läuft auf Port ${PORT}`));
+app.listen(PORT, () => console.log(`Server "MediathekView DE" läuft auf Port ${PORT}`));
