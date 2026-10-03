@@ -1,0 +1,16 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+    <rect width="512" height="512" rx="120" fill="#0f172a"/>
+    <line x1="210" y1="100" x2="170" y2="55" stroke="#22c55e" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="160" cy="45" r="10" fill="#22c55e"/>
+    <line x1="302" y1="100" x2="342" y2="55" stroke="#22c55e" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="352" cy="45" r="10" fill="#22c55e"/>
+    <rect x="130" y="95" width="252" height="240" rx="36" fill="none" stroke="#22c55e" stroke-width="14"/>
+    <path d="M190 155V125L256 175L322 125V155" fill="none" stroke="#22c55e" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="165" y="190" width="54" height="34" rx="8" fill="#22c55e"/>
+    <rect x="293" y="190" width="54" height="34" rx="8" fill="#22c55e"/>
+    <rect x="200" y="260" width="112" height="35" rx="6" fill="none" stroke="#22c55e" stroke-width="8"/>
+    <line x1="238" y1="260" x2="238" y2="295" stroke="#22c55e" stroke-width="6"/>
+    <line x1="274" y1="260" x2="274" y2="295" stroke="#22c55e" stroke-width="6"/>
+    <text x="256" y="385" font-family="monospace" font-weight="bold" font-size="34" fill="#22c55e" text-anchor="middle" letter-spacing="2">MY-ROBOT</text>
+    <text x="256" y="430" font-family="monospace" font-weight="bold" font-size="28" fill="#38bdf8" text-anchor="middle" letter-spacing="4">DEV</text>
+</svg>
