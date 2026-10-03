@@ -6,7 +6,7 @@ Klicke einfach auf den Link oder kopiere die Adresse in dein Stremio-Addon-Suchf
 
 👉 In Stremio installieren
 
-https://mediathekviewpro-myromiles-3.onrender.com/
+https://mediathekviewpro-myromiles-3.onrender.com/manifest.json
 
 Anleitung:
 
