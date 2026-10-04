@@ -26,8 +26,6 @@ const CATEGORY_MAP = {
     "Tagesschau": "Tagesschau"
 };
 
-const FALLBACK_POSTER = "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?w=500&auto=format&fit=crop&q=60";
-
 app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Headers", "*");
@@ -139,7 +137,7 @@ app.get("/manifest.json", (req, res) => {
 
     res.json({
         id: "org.mediathek.deutschland",
-        version: "1.2.2",
+        version: "1.2.3",
         name: "MediathekView DE (Erweitert)",
         description: "Alle deutschen ÖR-Sender mit erhöhter Anzahl an Inhalten",
         icon: iconUrl,
@@ -190,6 +188,10 @@ app.get("/manifest.json", (req, res) => {
 });
 
 app.get("/catalog/:type/:id/:extra?.json", async (req, res) => {
+    const host = req.get("host");
+    const protocol = req.protocol;
+    const fallbackPoster = `${protocol}://${host}/background.jpg`;
+
     const catalogId = req.params.id;
     let channel = "all";
     let genre = "";
@@ -253,7 +255,7 @@ app.get("/catalog/:type/:id/:extra?.json", async (req, res) => {
         if (poster.startsWith("//")) poster = "https:" + poster;
 
         if (!poster) {
-            poster = FALLBACK_POSTER;
+            poster = fallbackPoster;
         }
 
         const encodedId = Buffer.from(JSON.stringify({
@@ -277,6 +279,10 @@ app.get("/catalog/:type/:id/:extra?.json", async (req, res) => {
 });
 
 app.get("/meta/:type/:id.json", (req, res) => {
+    const host = req.get("host");
+    const protocol = req.protocol;
+    const fallbackPoster = `${protocol}://${host}/background.jpg`;
+
     try {
         const cleanId = req.params.id.replace("mvw:", "").replace(".json", "");
         const decoded = JSON.parse(Buffer.from(cleanId, "base64url").toString("utf-8"));
@@ -291,7 +297,7 @@ app.get("/meta/:type/:id.json", (req, res) => {
             }
         });
     } catch (e) {
-        res.json({ meta: { id: req.params.id, type: "movie", name: "Mediathek Stream", poster: FALLBACK_POSTER } });
+        res.json({ meta: { id: req.params.id, type: "movie", name: "Mediathek Stream", poster: fallbackPoster } });
     }
 });
 
