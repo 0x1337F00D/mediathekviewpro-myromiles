@@ -143,6 +143,11 @@ app.get("/manifest.json", (req, res) => {
         name: "MediathekView DE (Erweitert)",
         description: "Alle deutschen ÖR-Sender mit erhöhter Anzahl an Inhalten",
         icon: iconUrl,
+        contactEmail: "myesil1978@gmail.com",
+        stremioAddonsConfig: {
+            issuer: "https://stremio-addons.net",
+            signature: "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0..PH19_69BDe7Tr2hNz8J__g.ykkMo5Yvf3xVF0r11phJQj8PJYH0fupwL99BEP1kYbDDCbn8CNIl1BHUjVRaJNjZqRmii-COG5zyZWakYqx47XNAeDluvpF8oFAhz2lS5WRXa2RrjfMEa_nqcJvLMQ70.5LGu9u7qwCCHxuZQ7pEdZQ"
+        },
         resources: ["catalog", "meta", "stream"],
         types: ["movie"],
         catalogs: [
