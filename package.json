@@ -1,7 +1,7 @@
 {
-  "name": "streamflix-mediathek-addon",
+  "name": "streamio-mediathek-addon",
   "version": "1.0.0",
-  "description": "MediathekViewWeb Addon für Streamflix",
+  "description": "MediathekViewWeb Addon für Streamio",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -12,7 +12,7 @@
     "stremio-addon-sdk": "^1.6.10"
   },
   "keywords": [],
-  "author": "",
+  "author": "myro_miles",
   "license": "ISC",
   "type": "commonjs"
 }
