@@ -26,16 +26,30 @@ function extractImage(html, page) {
     }
     return null;
 }
+function extractArtwork(html, page) {
+    const landscape = extractImage(html, page);
+    // Only variants of the primary image, never unrelated recommendation art.
+    let portrait = null;
+    if (landscape && ['zdf.de', 'www.zdf.de'].includes(new URL(landscape).hostname)) {
+        const stem = landscape.split('~')[0];
+        for (const raw of html.match(/https:\/\/[^\s"<>\\]+~\d+x\d+[^\s"<>\\]*/g) || []) {
+            const candidate = unescape(raw);
+            const dimensions = candidate.match(/~(\d+)x(\d+)/);
+            if (candidate.split('~')[0] === stem && dimensions && Number(dimensions[1]) >= 400 && Number(dimensions[1]) / Number(dimensions[2]) < 0.95) portrait = candidate;
+        }
+    }
+    return { landscape, portrait };
+}
 async function fetchImage(page) {
     for (let i = 0; i < 4; i++) {
         if (!safePage(page)) return null;
         const r = await axios.get(page, { timeout: 4000, maxRedirects: 0, maxContentLength: 2 * 1024 * 1024, responseType: 'text', proxy: false, validateStatus: s => s === 200 || [301, 302, 303, 307, 308].includes(s), headers: { 'User-Agent': 'MediathekView-Sackfloete/1.3 (+https://github.com/0x1337F00D/mediathekviewpro-myromiles)', Accept: 'text/html' } });
-        if (r.status === 200) return extractImage(r.data, page);
+        if (r.status === 200) return extractArtwork(r.data, page);
         page = new URL(r.headers.location, page).href;
     }
     return null;
 }
-async function resolveImage(page) {
+async function resolveArtwork(page) {
     if (!safePage(page)) return null;
     const hit = cache.get(page);
     if (hit && hit.until > Date.now()) return hit.image;
@@ -45,7 +59,7 @@ async function resolveImage(page) {
     const slot = active < 12 ? (active++, Promise.resolve()) : new Promise(resolve => waiters.push(resolve));
     const request = slot.then(() => fetchImage(page)).catch(() => null).then(image => {
         if (cache.size >= 2000) cache.delete(cache.keys().next().value);
-        cache.set(page, { image, until: Date.now() + (image ? 86400000 : 60000) });
+        cache.set(page, { image, until: Date.now() + (image?.landscape ? 86400000 : 60000) });
         return image;
     }).finally(() => {
         const next = waiters.shift();
@@ -55,13 +69,14 @@ async function resolveImage(page) {
     pending.set(page, request);
     return request;
 }
+async function resolveImage(page) { return (await resolveArtwork(page))?.landscape || null; }
 const xml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c]));
-function titleCard(title, channel) {
+function titleCard(title, channel, portrait = false) {
     const lines = [];
     for (const word of String(title).slice(0, 240).split(/\s+/)) {
         if (!lines.length || (lines.at(-1).length + word.length > 32)) lines.push(word);
         else lines[lines.length - 1] += ' ' + word;
     }
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" rx="18" fill="#14243d"/><rect x="32" y="34" width="6" height="40" fill="#28c8e0"/><text x="54" y="62" font-family="sans-serif" font-size="24" fill="#28c8e0">${xml(String(channel).slice(0, 40))}</text><text font-family="sans-serif" font-size="28" font-weight="bold" fill="white">${lines.slice(0, 5).map((s, i) => `<tspan x="36" y="${122 + i * 39}">${xml(s)}</tspan>`).join('')}</text></svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="${portrait ? 960 : 360}" viewBox="0 0 640 ${portrait ? 960 : 360}"><rect width="640" height="${portrait ? 960 : 360}" rx="18" fill="#14243d"/><rect x="32" y="34" width="6" height="40" fill="#28c8e0"/><text x="54" y="62" font-family="sans-serif" font-size="24" fill="#28c8e0">${xml(String(channel).slice(0, 40))}</text><text font-family="sans-serif" font-size="28" font-weight="bold" fill="white">${lines.slice(0, 5).map((s, i) => `<tspan x="36" y="${122 + i * 39}">${xml(s)}</tspan>`).join('')}</text></svg>`;
 }
-module.exports = { safePage, extractImage, resolveImage, titleCard };
+module.exports = { safePage, extractImage, extractArtwork, resolveArtwork, resolveImage, titleCard };

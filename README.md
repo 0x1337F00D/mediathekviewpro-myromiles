@@ -82,4 +82,24 @@ In der Stremio-Suchleiste kannst du gezielte Filterzeichen verwenden, um die Erg
 ---
 
 ## 🚀 Installation & Start
-https://mhub-addon.onrender.com/manifest.json
+Sackfloete fork: https://sackfloete.duckdns.org/mediathek/manifest.json
+
+### Artwork (1.4.0)
+
+- `poster`: 400×600 JPEG cover; `background`: separate 1280×720 JPEG.
+- Official ZDF portrait variants are selected only for the primary programme image.
+  These are broadcaster-authored crops, not necessarily dedicated movie posters.
+- Without a portrait variant, the full landscape frame is retained inside a readable
+  portrait layout; no arbitrary recommendation posters or face-cutting crop.
+- Official ZDF/3sat corner logos; other stations use neutral text badges.
+  Logo sources and trademark attribution: `logos/SOURCES.txt`.
+- Lazy image processing, two simultaneous jobs, bounded 20-second wait queue,
+  24 MiB output cache, 5 MiB download limit and 16 MP decode limit.
+  HTTPS broadcaster allowlist, redirect revalidation and public IPv4 DNS pinning
+  protect the image downloader against SSRF. Failed artwork uses a title card.
+- Existing 1.3.0 item IDs and direct video streams remain compatible.
+
+Design references (independent implementation, no copied Kodi code):
+https://github.com/Nigel1992/NLZiet-Kodi-Addon/releases (aspect-ratio-aware artwork)
+https://github.com/rols1/Kodi-Addon-ARDundZDF (broadcaster-specific image fields)
+https://github.com/stremio/stremio-addon-sdk/blob/master/docs/api/responses/meta.md

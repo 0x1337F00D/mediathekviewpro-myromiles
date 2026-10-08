@@ -1,5 +1,6 @@
 # Basis-Image wählen (z.B. node:18-alpine für Stremio-Addons)
 FROM node:24-alpine
+RUN apk add --no-cache font-dejavu
 
 # Arbeitsverzeichnis festlegen
 WORKDIR /app

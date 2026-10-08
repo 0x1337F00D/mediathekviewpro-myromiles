@@ -2,6 +2,7 @@ const express = require("express");
 const axios = require("axios");
 const app = express();
 const { resolveImage, titleCard } = require('./posters');
+const { renderArtwork } = require('./artwork');
 const publicBase = req => process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get('host')}`;
 const PORT = process.env.PORT || 7000;
 
@@ -114,7 +115,7 @@ async function fetchItems(genre, channel, searchQuery) {
             headers: { "Content-Type": "application/json" },
             timeout: 10000
         });
-        
+
         let results = res.data?.result?.results || [];
 
         results = results.filter(i => {
@@ -139,18 +140,18 @@ app.get("/manifest.json", (req, res) => {
 
     res.json({
         id: "org.sackfloete.mediathek",
-        version: "1.3.0",
+        version: "1.4.0",
         name: "MediathekView DE · Sackfloete",
         description: "Alle deutschen ÖR-Sender mit erhöhter Anzahl an Inhalten",
         icon: iconUrl,
         resources: ["catalog", "meta", "stream"],
         types: ["movie"],
         catalogs: [
-            { 
-                type: "movie", 
-                id: "de_search", 
-                name: "🔍 Mediathek: Erweiterte Suche", 
-                extra: [{ name: "search", isRequired: true }] 
+            {
+                type: "movie",
+                id: "de_search",
+                name: "🔍 Mediathek: Erweiterte Suche",
+                extra: [{ name: "search", isRequired: true }]
             },
             { type: "movie", id: "de_ard", name: "ARD: Neueste Beiträge" },
             { type: "movie", id: "de_zdf", name: "ZDF: Neueste Beiträge" },
@@ -190,6 +191,18 @@ app.get('/poster.svg', async (req, res) => {
     res.set('Cache-Control', image ? 'public, max-age=3600' : 'public, max-age=30');
     if (image) return res.redirect(302, image);
     res.type('image/svg+xml').send(titleCard(req.query.title || 'Mediathek', req.query.channel || 'Öffentlich-rechtlich'));
+});
+
+app.get('/artwork.jpg', async (req, res) => {
+    const page = typeof req.query.page === 'string' ? req.query.page.slice(0, 2048) : '';
+    const title = typeof req.query.title === 'string' ? req.query.title.slice(0, 160) : 'Mediathek';
+    const channel = typeof req.query.channel === 'string' ? req.query.channel.slice(0, 24) : 'ÖR';
+    const format = req.query.format === 'background' ? 'background' : 'cover';
+    try {
+        const buffer = await renderArtwork(page, title, channel, format);
+        if (buffer) return res.set('Cache-Control', 'public, max-age=3600').type('image/jpeg').send(buffer);
+    } catch (e) { console.warn('Artwork unavailable:', e.message); }
+    res.set('Cache-Control', 'public, max-age=10').type('image/svg+xml').send(titleCard(title, channel, format === 'cover'));
 });
 
 app.get("/catalog/:type/:id/:extra?.json", async (req, res) => {
@@ -233,7 +246,7 @@ app.get("/catalog/:type/:id/:extra?.json", async (req, res) => {
 
     let searchQuery = "";
     const extraPath = req.params.extra || "";
-    
+
     if (extraPath.includes("search=")) {
         const parts = extraPath.split("&");
         for (const part of parts) {
@@ -242,7 +255,7 @@ app.get("/catalog/:type/:id/:extra?.json", async (req, res) => {
             }
         }
     }
-    
+
     if (!searchQuery && req.query.search) {
         searchQuery = decodeURIComponent(req.query.search);
     }
@@ -255,20 +268,21 @@ app.get("/catalog/:type/:id/:extra?.json", async (req, res) => {
 
     const metas = items.map(i => {
         const videoUrl = i.url_video_hd || i.url_video || "";
-        
+
         let poster = i.preview_image_url || "";
         if (poster.startsWith("//")) poster = "https:" + poster;
 
-        if (!poster) {
-            const params = new URLSearchParams({ page: i.url_website || '', title: i.title || 'Mediathek', channel: i.channel || '' });
-            poster = `${publicBase(req)}/poster.svg?${params}`;
-        }
+        const params = new URLSearchParams({ page: i.url_website || '', title: i.title || 'Mediathek', channel: i.channel || '' });
+        poster = `${publicBase(req)}/artwork.jpg?${params}&format=cover`;
+        const background = `${publicBase(req)}/artwork.jpg?${params}&format=background`;
 
         const encodedId = Buffer.from(JSON.stringify({
             url: videoUrl,
             title: i.title || "Unbekannter Titel",
             description: `[${i.channel}] ${i.topic}\n\n${i.description || "Keine Beschreibung verfügbar."}`,
-            poster: poster
+            poster: poster,
+            background: background,
+            posterShape: 'poster'
         })).toString("base64url");
 
         return {
@@ -276,8 +290,8 @@ app.get("/catalog/:type/:id/:extra?.json", async (req, res) => {
             type: "movie",
             name: i.title || "Unbekannter Titel",
             poster: poster,
-            posterShape: 'landscape',
-            background: poster,
+            posterShape: 'poster',
+            background: background,
             description: `[${i.channel}] ${i.topic}\n\n${i.description || "Keine Beschreibung verfügbar."}`
         };
     });
@@ -299,8 +313,8 @@ app.get("/meta/:type/:id.json", (req, res) => {
                 type: "movie",
                 name: decoded.title,
                 poster: decoded.poster,
-                posterShape: 'landscape',
-                background: decoded.poster,
+                posterShape: decoded.posterShape || 'landscape',
+                background: decoded.background || decoded.poster,
                 description: decoded.description
             }
         });

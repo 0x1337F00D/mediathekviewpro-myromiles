@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="341px" height="341px" viewBox="0 0 341 341" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 51.3 (57544) - http://www.bohemiancoding.com/sketch -->
+    <title>Logo</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Symbols" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="organisms/stage/expanded" transform="translate(-341.000000, -341.000000)">
+            <g id="Group">
+                <g id="Logo" transform="translate(341.000000, 341.000000)">
+                    <polygon id="Fill-1" fill="#EB0A28" points="0 341 340.994616 341 340.994616 0 0 0"></polygon>
+                    <g id="Group-8" transform="translate(79.865789, 52.944737)" fill="#FFFFFF">
+                        <path d="M149.299761,79.2233634 L116.558377,111.965645 C125.67205,119.289966 133.27635,129.952498 133.27635,145.372877 C133.27635,170.791734 112.745458,189.611345 87.0825161,189.611345 C58.7319555,189.611345 42.6008608,172.503016 33.8021634,153.439321 L0.806823947,186.434661 C15.9606845,210.875387 43.8230766,234.582963 87.0825161,234.582963 C137.67525,234.582963 180.446521,195.966508 180.446521,145.372877 C180.446521,116.26045 166.478084,93.8944397 149.299761,79.2233634" id="Fill-2"></path>
+                        <polygon id="Fill-4" points="90.6259547 124.992653 60.1961916 94.5637868 150.404152 4.35582632 180.832121 34.7846921"></polygon>
+                        <polygon id="Fill-6" points="45.521795 42.6060655 3.48367395 0.567047105 141.262929 0.567047105 99.2248082 42.6060655"></polygon>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

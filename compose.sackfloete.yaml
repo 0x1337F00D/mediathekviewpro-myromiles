@@ -3,14 +3,17 @@ services:
     build:
       context: .
       network: host
-    image: mediathek-sackfloete:1.3.0
+    image: mediathek-sackfloete:1.4.0
     container_name: mediathek-addon
     restart: unless-stopped
     dns: [172.31.53.1]
     environment:
       PUBLIC_BASE_URL: https://sackfloete.duckdns.org/mediathek
       NODE_ENV: production
+      XDG_CACHE_HOME: /tmp
     read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m,uid=1000,gid=1000,mode=0700
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     mem_limit: 256m
