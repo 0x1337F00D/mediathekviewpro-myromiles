@@ -1,5 +1,29 @@
 # MediathekView Pro (my-robot Dev)
 
+## Sackfloete fork: real programme thumbnails
+
+This fork fixes the repeated broadcaster collage: the MediathekViewWeb API does
+not provide `preview_image_url`. Programme artwork is resolved lazily from each
+broadcaster's OpenGraph/Twitter metadata, with landscape cards, a bounded 24-hour
+cache, request coalescing and 12 concurrent lookups. Missing/deleted pages get a
+readable SVG card with the title and channel, not the same generic poster.
+
+Page requests accept HTTPS broadcaster domains only; redirects are revalidated,
+requests time out and response sizes are capped. No account credentials are used.
+The unused SDK and vulnerable dependencies were removed/updated. `npm test` runs
+the parser, URL-policy and SVG-escaping checks.
+
+Run `npm ci && npm start`. Set `PUBLIC_BASE_URL` to the externally reachable base
+URL behind a reverse proxy. `compose.sackfloete.yaml` deploys an unprivileged,
+read-only, resource-limited container with no published host ports. Configure
+Caddy `handle_path /mediathek/* { reverse_proxy mediathek-addon:7000 }` inside the
+existing site's route, then install `/mediathek/manifest.json` in Stremio. The fork
+uses a distinct addon ID; remove the upstream addon to avoid duplicate catalogues.
+
+Known limitation: a deleted broadcaster page cannot supply its original artwork.
+No video extraction, video re-encoding, third-party image generation or extra
+metadata service is involved. Live ARD, ZDF and ARTE image resolution was verified.
+
 Ein leistungsstarkes, selbstgehostetes Stremio-Add-on zur Wiedergabe und Durchsuchung von öffentlich-rechtlichen Mediathek-Inhalten (ARD, ZDF, ARTE u. a.) basierend auf der offiziellen MediathekViewWeb-API.
 
 ## 🚀 Features & Funktionen

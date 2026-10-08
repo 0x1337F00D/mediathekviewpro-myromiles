@@ -1,6 +1,8 @@
 const express = require("express");
 const axios = require("axios");
 const app = express();
+const { resolveImage, titleCard } = require('./posters');
+const publicBase = req => process.env.PUBLIC_BASE_URL || `${req.protocol}://${req.get('host')}`;
 const PORT = process.env.PORT || 7000;
 
 app.use(express.static(__dirname));
@@ -133,19 +135,14 @@ async function fetchItems(genre, channel, searchQuery) {
 app.get("/manifest.json", (req, res) => {
     const host = req.get("host");
     const protocol = req.protocol;
-    const iconUrl = `${protocol}://${host}/icon.svg`;
+    const iconUrl = `${publicBase(req)}/icon.svg`;
 
     res.json({
-        id: "org.mediathek.deutschland",
-        version: "1.2.3",
-        name: "MediathekView DE (Erweitert)",
+        id: "org.sackfloete.mediathek",
+        version: "1.3.0",
+        name: "MediathekView DE · Sackfloete",
         description: "Alle deutschen ÖR-Sender mit erhöhter Anzahl an Inhalten",
         icon: iconUrl,
-        contactEmail: "myesil1978@gmail.com",
-        stremioAddonsConfig: {
-            issuer: "https://stremio-addons.net",
-            signature: "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0..PH19_69BDe7Tr2hNz8J__g.ykkMo5Yvf3xVF0r11phJQj8PJYH0fupwL99BEP1kYbDDCbn8CNIl1BHUjVRaJNjZqRmii-COG5zyZWakYqx47XNAeDluvpF8oFAhz2lS5WRXa2RrjfMEa_nqcJvLMQ70.5LGu9u7qwCCHxuZQ7pEdZQ"
-        },
         resources: ["catalog", "meta", "stream"],
         types: ["movie"],
         catalogs: [
@@ -187,10 +184,18 @@ app.get("/manifest.json", (req, res) => {
     });
 });
 
+app.get('/poster.svg', async (req, res) => {
+    const page = typeof req.query.page === 'string' ? req.query.page.slice(0, 2048) : '';
+    const image = await resolveImage(page);
+    res.set('Cache-Control', image ? 'public, max-age=3600' : 'public, max-age=30');
+    if (image) return res.redirect(302, image);
+    res.type('image/svg+xml').send(titleCard(req.query.title || 'Mediathek', req.query.channel || 'Öffentlich-rechtlich'));
+});
+
 app.get("/catalog/:type/:id/:extra?.json", async (req, res) => {
     const host = req.get("host");
     const protocol = req.protocol;
-    const fallbackPoster = `${protocol}://${host}/background.jpg`;
+    const fallbackPoster = `${publicBase(req)}/background.jpg`;
 
     const catalogId = req.params.id;
     let channel = "all";
@@ -255,7 +260,8 @@ app.get("/catalog/:type/:id/:extra?.json", async (req, res) => {
         if (poster.startsWith("//")) poster = "https:" + poster;
 
         if (!poster) {
-            poster = fallbackPoster;
+            const params = new URLSearchParams({ page: i.url_website || '', title: i.title || 'Mediathek', channel: i.channel || '' });
+            poster = `${publicBase(req)}/poster.svg?${params}`;
         }
 
         const encodedId = Buffer.from(JSON.stringify({
@@ -270,6 +276,7 @@ app.get("/catalog/:type/:id/:extra?.json", async (req, res) => {
             type: "movie",
             name: i.title || "Unbekannter Titel",
             poster: poster,
+            posterShape: 'landscape',
             background: poster,
             description: `[${i.channel}] ${i.topic}\n\n${i.description || "Keine Beschreibung verfügbar."}`
         };
@@ -292,6 +299,7 @@ app.get("/meta/:type/:id.json", (req, res) => {
                 type: "movie",
                 name: decoded.title,
                 poster: decoded.poster,
+                posterShape: 'landscape',
                 background: decoded.poster,
                 description: decoded.description
             }
